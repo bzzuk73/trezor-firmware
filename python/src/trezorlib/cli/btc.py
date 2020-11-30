@@ -193,7 +193,7 @@ def get_public_node(client, coin, address, curve, script_type, show_display):
 @cli.command()
 @click.option("-c", "--coin")
 @click.option(
-    "-n", "--account", required=True, help="account index (0 = first account)"
+    "-n", "--account", required=True, type=int, help="account index (0 = first account)"
 )
 @click.option("-t", "--script-type", type=ChoiceType(INPUT_SCRIPTS), default="address")
 @click.option("-d", "--show-display", is_flag=True)
@@ -201,14 +201,44 @@ def get_public_node(client, coin, address, curve, script_type, show_display):
 def get_descriptor(client, coin, account, script_type, show_display):
     """Get descriptor of given account."""
     coin = coin or DEFAULT_COIN
-    result = btc.get_descriptor(
+    if script_type == messages.InputScriptType.SPENDADDRESS:
+        acc_type = 44
+        fmt = "pkh({})"
+        account_type = "Legacy"
+    elif script_type == messages.InputScriptType.SPENDP2SHWITNESS:
+        acc_type = 49
+        fmt = "sh(wpkh({}))"
+        account_type = "Compatibility Segwit"
+    elif script_type == messages.InputScriptType.SPENDWITNESS:
+        acc_type = 84
+        account_type = "Native Segwit"
+        fmt = "wpkh({})"
+    else:
+        raise click.ClickException("Unsupported account type")
+
+    if coin is None or coin == "Bitcoin":
+        coin_type = 0
+    elif coin == "Testnet":
+        coin_type = 1
+    else:
+        raise click.ClickException("Unsupported coin")
+
+    path = f"m/{acc_type}'/{coin_type}'/{account}'"
+    n = tools.parse_path(path)
+    pub = btc.get_public_node(
         client,
-        account,
+        n,
         show_display=show_display,
         coin_name=coin,
         script_type=script_type,
+        ignore_xpub_magic=True,
     )
-    return result
+
+    fingerprint = pub.root_fingerprint if pub.root_fingerprint is not None else 0
+    external = f"[{fingerprint:08x}{path[1:]}]{pub.xpub}/0/*"
+    internal = f"[{fingerprint:08x}{path[1:]}]{pub.xpub}/1/*"
+
+    return fmt.format(external), fmt.format(internal)
 
 
 #
