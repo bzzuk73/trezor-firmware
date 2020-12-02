@@ -133,5 +133,5 @@ VECTORS_DESCRIPTORS = (  # coin, account, script_type, descriptors
 
 @pytest.mark.parametrize("coin, account, script_type, descriptors", VECTORS_DESCRIPTORS)
 def test_descriptors(client, coin, account, script_type, descriptors):
-    res = btc.get_descriptor(client, coin, account, script_type, show_display=True)
+    res = btc._get_descriptor(client, coin, account, script_type, show_display=True)
     assert res == descriptors
