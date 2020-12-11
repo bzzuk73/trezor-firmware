@@ -2,24 +2,24 @@ from micropython import const
 
 from trezor import ui
 
+from ...constants import (
+    TEXT_HEADER_HEIGHT,
+    TEXT_LINE_HEIGHT,
+    TEXT_LINE_HEIGHT_HALF,
+    TEXT_MARGIN_LEFT,
+    TEXT_MAX_LINES,
+)
+
 if False:
     from typing import List, Union
 
-TEXT_HEADER_HEIGHT = const(48)
-TEXT_LINE_HEIGHT = const(26)
-TEXT_LINE_HEIGHT_HALF = const(13)
-TEXT_MARGIN_LEFT = const(14)
-TEXT_MAX_LINES = const(5)
+    TextContent = Union[str, int]
 
 # needs to be different from all colors and font ids
 BR = const(-256)
 BR_HALF = const(-257)
 
 _FONTS = (ui.NORMAL, ui.BOLD, ui.MONO)
-
-if False:
-    TextContent = Union[str, int]
-
 
 DASH_WIDTH = ui.display.text_width("-", ui.BOLD)
 
@@ -267,7 +267,7 @@ def render_text(
             offset_x += span.width + SPACE
 
 
-class Text(ui.Component):
+class TextBase(ui.Component):
     def __init__(
         self,
         header_text: str,
@@ -293,7 +293,6 @@ class Text(ui.Component):
         self.content_offset = content_offset
         self.char_offset = char_offset
         self.line_width = line_width
-        self.repaint = True
 
     def normal(self, *content: TextContent) -> None:
         self.content.append(ui.NORMAL)
@@ -314,116 +313,10 @@ class Text(ui.Component):
         self.content.append(BR_HALF)
 
     def on_render(self) -> None:
-        if self.repaint:
-            ui.header(
-                self.header_text,
-                self.header_icon,
-                ui.TITLE_GREY,
-                ui.BG,
-                self.icon_color,
-            )
-            render_text(
-                self.content,
-                self.new_lines,
-                self.max_lines,
-                item_offset=self.content_offset,
-                char_offset=self.char_offset,
-                break_words=self.break_words,
-                line_width=self.line_width,
-                render_page_overflow=self.render_page_overflow,
-            )
-            self.repaint = False
+        pass
 
     if __debug__:
 
         def read_content(self) -> List[str]:
             lines = [w for w in self.content if isinstance(w, str)]
             return [self.header_text] + lines[: self.max_lines]
-
-
-LABEL_LEFT = const(0)
-LABEL_CENTER = const(1)
-LABEL_RIGHT = const(2)
-
-
-class Label(ui.Component):
-    def __init__(
-        self,
-        area: ui.Area,
-        content: str,
-        align: int = LABEL_LEFT,
-        style: int = ui.NORMAL,
-    ) -> None:
-        super().__init__()
-        self.area = area
-        self.content = content
-        self.align = align
-        self.style = style
-
-    def on_render(self) -> None:
-        if self.repaint:
-            align = self.align
-            ax, ay, aw, ah = self.area
-            ui.display.bar(ax, ay, aw, ah, ui.BG)
-            tx = ax + aw // 2
-            ty = ay + ah // 2 + 8
-            if align is LABEL_LEFT:
-                ui.display.text(tx, ty, self.content, self.style, ui.FG, ui.BG)
-            elif align is LABEL_CENTER:
-                ui.display.text_center(tx, ty, self.content, self.style, ui.FG, ui.BG)
-            elif align is LABEL_RIGHT:
-                ui.display.text_right(tx, ty, self.content, self.style, ui.FG, ui.BG)
-            self.repaint = False
-
-    if __debug__:
-
-        def read_content(self) -> List[str]:
-            return [self.content]
-
-
-def text_center_trim_left(
-    x: int, y: int, text: str, font: int = ui.NORMAL, width: int = ui.WIDTH - 16
-) -> None:
-    if ui.display.text_width(text, font) <= width:
-        ui.display.text_center(x, y, text, font, ui.FG, ui.BG)
-        return
-
-    ELLIPSIS_WIDTH = ui.display.text_width("...", ui.BOLD)
-    if width < ELLIPSIS_WIDTH:
-        return
-
-    text_length = 0
-    for i in range(1, len(text)):
-        if ui.display.text_width(text[-i:], font) + ELLIPSIS_WIDTH > width:
-            text_length = i - 1
-            break
-
-    text_width = ui.display.text_width(text[-text_length:], font)
-    x -= (text_width + ELLIPSIS_WIDTH) // 2
-    ui.display.text(x, y, "...", ui.BOLD, ui.GREY, ui.BG)
-    x += ELLIPSIS_WIDTH
-    ui.display.text(x, y, text[-text_length:], font, ui.FG, ui.BG)
-
-
-def text_center_trim_right(
-    x: int, y: int, text: str, font: int = ui.NORMAL, width: int = ui.WIDTH - 16
-) -> None:
-    if ui.display.text_width(text, font) <= width:
-        ui.display.text_center(x, y, text, font, ui.FG, ui.BG)
-        return
-
-    ELLIPSIS_WIDTH = ui.display.text_width("...", ui.BOLD)
-    if width < ELLIPSIS_WIDTH:
-        return
-
-    text_length = 0
-    for i in range(1, len(text)):
-        if ui.display.text_width(text[:i], font) + ELLIPSIS_WIDTH > width:
-            text_length = i - 1
-            break
-
-    text_width = ui.display.text_width(text[:text_length], font)
-    x -= (text_width + ELLIPSIS_WIDTH) // 2
-    ui.display.text(x, y, text[:text_length], font, ui.FG, ui.BG)
-    x += text_width
-    ui.display.text(x, y, "...", ui.BOLD, ui.GREY, ui.BG)
