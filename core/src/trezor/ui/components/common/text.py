@@ -220,6 +220,7 @@ def render_text(
         if (
             item_width <= line_width
             and item_width + offset_x - INITIAL_OFFSET_X > line_width
+            and "\n" not in item
         ):
             offset_y += TEXT_LINE_HEIGHT
             ui.display.text(INITIAL_OFFSET_X, offset_y, item, font, fg, bg)
